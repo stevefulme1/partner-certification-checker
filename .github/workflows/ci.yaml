@@ -1,0 +1,59 @@
+---
+name: Certification checker CI
+
+"on":
+  schedule:
+    # Daily
+    - cron: "23 7 * * *"
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nox:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Inputs:
+          #   session: name of session
+          #   python-versions: comma-separated list of Python versions to install
+          - session: "actionlint"
+            python-versions: "3.12"
+          - session: "zizmor"
+            python-versions: "3.12"
+
+    name: "Run nox ${{ matrix.session }} session"
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup nox
+        uses: wntrblm/nox@5a277b752f6094150e25237d47c34168e2b7526e # 2026.02.09
+        with:
+          python-versions: "${{ matrix.python-versions }}"
+
+      - name: "Run nox -e ${{ matrix.session }}"
+        # zizmor: ignore[template-injection]
+        run: |
+          nox -e "${{ matrix.session }}"
+
+  check:
+    if: always()
+
+    needs:
+      - nox
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
