@@ -1,44 +1,50 @@
-# Certifying Ansible collections
+# Red Hat partner certification checker
 
-This repository helps Red Hat partners check their Ansible content against minimum requirements for certification on Ansible Automation Hub.
+This repository provides Red Hat partners with GitHub workflows that check collections for minimum requirements for certification on Red Hat Ansible Automation Hub (Automation Hub).
 
-## Certification checks
+## Purpose of certification checks
 
-This repository provides GitHub workflows to perform sanity and lint tests as part of the [Red Hat certification workflow guide](https://connect.redhat.com/sites/default/files/2025-06/Ansible-Certification-Workflow-Guide202506.pdf).
-The purpose of these certification checks is to identify common errors in the Ansible Automation Hub import process.
-You should run these checks before uploading Ansible collections to Automation Hub.
+To upload Ansible collections to Automation Hub, Red Hat partners must satisfy certification requirements.
+Those requirements include running sanity and lint tests against collections during the Automation Hub import process.
 
-Certification checks are not a substitute for a comprehensive testing strategy.
-You should add unit and integration tests for robust test coverage that validates the functionality and behavior of your modules, plugins, and roles.
+In cases where those tests fail or highlight breaking issues, the collection uploads are rejected.
+This requires Red Hat partners to address the issues and resubmit their collections, which results in additional development and release cycles.
 
-## Preparing collections for certification
+The certification checker provides Red Hat partners with the ability to assess the readiness of collections for certification.
+It is a minimal tool intended to reduce the likelihood of rejection by identifying common errors that Red Hat partners can fix before uploading to Automation Hub.
 
-Before uploading your collection to Ansible Automation Hub, you should verify that it meets certification requirements.
-Follow instructions in the [Red Hat certification workflow guide](https://connect.redhat.com/sites/default/files/2025-06/Ansible-Certification-Workflow-Guide202506.pdf) to ensure that your collection meets all requirements.
-
-Some common reasons for certification rejections include:
-
-- Missing or unclear sections in the project README.
-Refer to the [Ansible Certified Collections README Template](https://access.redhat.com/articles/7068606) for all information that your README must contain.
-- Missing changelog entries for each collection version.
-We recommend using the [antsibull-changelog](https://docs.ansible.com/projects/antsibull-changelog/) tool for changelog generation.
-
-Additionally, certified collections must follow guidelines for dependency management such as:
-
-- Python dependencies must be declared in a `requirements.txt` file with either a lower bound constraint, `>=x.x.x`, or not fixed to a version.
-- Python dependencies must not include `ansible` or `ansible-core`.
-- Ansible collection dependencies can exist only if the dependency is also a certified collection.
+> Certification checks are not a substitute for a comprehensive testing strategy.
+> You should add unit and integration tests for robust test coverage that validates the functionality and behavior of your modules, plugins, and roles.
 
 ## Adding certification checks to your repository
 
 To run the certification checks against pull requests and on schedule:
 
-1. Copy the [Ansible collection certification GitHub Actions workflow](https://github.com/ansible-collections/certification/blob/main/.github/workflows/certification.yml) to the `.github/workflows` directory of your collection repository.
-1. Add an [.ansible-lint](.ansible-lint) configuration file to the root directory of your collection. List any files and folders that are not related to the collection's core functionality, such as `.github/`, so that Ansible Lint does not warn about violations in those files and folders. Commit and push the changes to your upstream repository on GitHub.
-1. Navigate to the `Actions` tab of the repository and then verify the workflow is enabled. 
-1. If there are sanity test failures that cannot be fixed and are [allowed to ignore](https://docs.ansible.com/projects/lint/rules/sanity/), create a [sanity ignore file](https://docs.ansible.com/projects/ansible/devel/dev_guide/testing/sanity/ignores.html#ignore-file-location) for each affected version of ansible-core (for example, `tests/sanity/ignore-2.18.txt`) and add corresponding entries.
+1. Copy the [Ansible collection certification GitHub Actions workflow](https://github.com/ansible-collections/partner-certification-checker/blob/main/.github/workflows/certification.yml) to the `.github/workflows` directory of your collection repository, for example:
+    ```bash
+    git clone git@github.com:ansible-collections/partner-certification-checker.git
+    cp partner-certification-checker/.github/workflows/certification.yml path/to/repository/.github/workflows/
+    ```
+1. Add an [.ansible-lint](https://github.com/ansible-collections/partner-certification-checker/blob/main/.ansible-lint) configuration file to the root directory of your collection.
+1. List any files and folders that are not related to the collection's core functionality, such as `.github/`, to the `exclude_paths` option.
+This prevents Ansible Lint rule violations in those files and folders.
+1. Commit and push the changes to your repository.
+1. Navigate to the `Actions` tab of your repository and verify that the workflow is enabled.
 
-### Updating the test matrix
+### Ignoring sanity failures
 
-You must update the list of `ansible-core` versions in the `Sanity` job of the `.github/workflows/certification.yml` workflow when new versions of `ansible-core` are released.
+The certification checker might report sanity test failures that cannot be fixed and should be ignored.
+In this case you should do the following:
+
+1. Review the list of [currently allowed ignores](https://docs.ansible.com/projects/lint/rules/sanity/).
+1. Create a [sanity ignore file](https://docs.ansible.com/projects/ansible/devel/dev_guide/testing/sanity/ignores.html#ignore-file-location) for each affected version of ansible-core (for example, `tests/sanity/ignore-2.18.txt`).
+1. Add the corresponding entries to the sanity ignore files.
+1. Commit and push the changes to your repository.
+
+## Using the standalone workflow
+
+The `.github/workflows/certification.yml` workflow file calls a reusable workflow that the Ansible Community and Partner Engineering team at Red Hat maintain.
+If you want to modify and maintain the certification checker, you can use the `.github/workflows/certification-static.yml` workflow file instead.
+
+You must update the list of `ansible-core` versions in the `sanity.strategy.matrix.ansible` section of the workflow when new versions of `ansible-core` are released.
 Refer to default `ansible-core` versions in the `Ansible Automation Platform Installation Requirements` section of the [Red Hat Ansible Automation Platform Life Cycle](https://access.redhat.com/support/policy/updates/ansible-automation-platform#installation) document.
