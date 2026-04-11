@@ -105,7 +105,6 @@ jobs:
     name: "Lint production"
     runs-on: ubuntu-latest
     env:
-      LINT_VER: "24.12.2"
       COLLECTION_ROOT: ${{ inputs.collection-root }}
     steps:
       - name: Check out code
@@ -122,6 +121,22 @@ jobs:
         env:
           CORE_VER: ${{ inputs.ansible-core-version }}
         run: pip install ansible-core=="${CORE_VER}"
+
+      - name: Determine compatible ansible-lint version
+        id: lint-version
+        env:
+          ANSIBLE_CORE_VERSION: ${{ inputs.ansible-core-version }}
+        run: |
+          # ansible-lint 24.12.2 is incompatible with ansible-core >= 2.19
+          # because ansible.parsing.yaml.constructor was removed.
+          # Use ansible-lint >= 25.1.0 for ansible-core 2.19+.
+          major_minor=$(echo "${ANSIBLE_CORE_VERSION}" | cut -d. -f1,2)
+          minor=$(echo "${major_minor}" | cut -d. -f2)
+          if [ "${minor}" -ge 19 ]; then
+            echo "LINT_VER=25.1.0" >> "${GITHUB_ENV}"
+          else
+            echo "LINT_VER=24.12.2" >> "${GITHUB_ENV}"
+          fi
 
       - name: Install ansible-lint
         run: pip install ansible-lint==${{ env.LINT_VER }}
