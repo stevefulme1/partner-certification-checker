@@ -34,6 +34,19 @@ on:
           repository).
         default: "."
         type: string
+      automation-hub:
+        type: boolean
+        description: >-
+          Configure Red Hat Ansible Automation Hub as a Galaxy server
+          for ansible-galaxy to use when installing collections.
+          The 'AH_TOKEN' secret must be provided when using this input.
+        default: false
+    secrets:
+      AH_TOKEN:
+        description: >-
+          Token used to authenticate with Red Hat Ansible Automation Hub.
+          Use the 'AH_TOKEN' secret when the automation-hub input boolean is true.
+        required: false
 
 jobs:
   # Derive stable-X.Y from the ansible-core-version input for use in the
@@ -95,6 +108,12 @@ jobs:
 
           echo "GALAXY_IMPORTER_CONFIG=/tmp/galaxy-importer.cfg" >> "${GITHUB_ENV}"
 
+      - name: Configure Red Hat Ansible Automation Hub
+        if: ${{ inputs.automation-hub }}
+        uses: ansible-collections/partner-certification-checker/.github/actions/configure-automation-hub@main # zizmor: ignore[unpinned-uses]
+        with:
+          ah-token: ${{ secrets.AH_TOKEN }} # zizmor: ignore[secrets-outside-env]
+
       - name: Build the collection tarball and run galaxy importer on it
         shell: bash
         run: python -m galaxy_importer.main --git-clone-path "${COLLECTION_ROOT}" --output-path /tmp
@@ -126,6 +145,12 @@ jobs:
       - name: Install ansible-lint
         run: pip install ansible-lint==${{ env.LINT_VER }}
 
+      - name: Configure Red Hat Ansible Automation Hub
+        if: ${{ inputs.automation-hub }}
+        uses: ansible-collections/partner-certification-checker/.github/actions/configure-automation-hub@main # zizmor: ignore[unpinned-uses]
+        with:
+          ah-token: ${{ secrets.AH_TOKEN }} # zizmor: ignore[secrets-outside-env]
+
       - name: Run ansible-lint
         # We must change directory first prior to running ansible-lint
         # if a collection root other than the default has been provided.
@@ -149,13 +174,19 @@ jobs:
         python: ${{ fromJSON(inputs.python-versions) }}
 
     steps:
+      - name: Configure Red Hat Ansible Automation Hub
+        if: ${{ inputs.automation-hub }}
+        uses: ansible-collections/partner-certification-checker/.github/actions/configure-automation-hub@main # zizmor: ignore[unpinned-uses]
+        with:
+          ah-token: ${{ secrets.AH_TOKEN }} # zizmor: ignore[secrets-outside-env]
+
       # Run sanity tests inside a Docker container.
       # The docker container has all the pinned dependencies that are
       # required and all Python versions Ansible supports.
       - name: Perform sanity testing
         # See the documentation for the following GitHub action on
         # https://github.com/ansible-community/ansible-test-gh-action/blob/main/README.md
-        uses: ansible-community/ansible-test-gh-action@d3a8ec7a59694e25e210fcd44738910149537f0e  # v1.17.0
+        uses: ansible-community/ansible-test-gh-action@d3a8ec7a59694e25e210fcd44738910149537f0e # v1.17.0
         with:
           ansible-core-version: ${{ needs.compute-versions.outputs.stable-ansible }}
           testing-type: sanity
